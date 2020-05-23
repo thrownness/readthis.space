@@ -31,7 +31,7 @@
         <p><small id="time" style="display:none">Last Updated: <span id="lastUpdated"></span></small></p>
         <div id="content"></div>
         <button id="publishButton" onclick="publish()" style="display:none">Publish</button>
-        <p id="about" style="display:none"><small><i><a href="/?=welcome-to-readthis.space#gigoz0C7iJswib5l4HF1FyRA8p6KIhDeTEUwl3f2WcM=">Learn more about readthis.space</a></i></small></p>
+        <p id="about" style="display:none"><small><i><a href="https://github.com/thrownness/readthis.space/blob/master/README.md">Learn more about readthis.space</a></i></small></p>
     </div>
 <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
@@ -42,38 +42,37 @@
     const user = gun.user();
     const SEA = Gun.SEA;
     var myKeys = {};
+    var urlPassword = '';
+    var currentTitle = '';
+    var hash = '';
 
     async function publish() {
-        var title = await user.get('title').once().then();
-        var hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
-        var articleID = `${encodeURI(title.replace(/\s+/g, '-').toLowerCase())}#${hash}`;
-        gun.get(`readthis#`).get(articleID).put(myKeys.pub);
-        history.pushState({id: articleID},'', '?='+articleID);
+        gun.get(`readthis.space#`).get(hash).put(myKeys.pub);
+        history.pushState({},'', `?t=${encodeURI(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`);
         location.reload();
     }
 
-    function renderArticle(nodeId) {
-        gun.get(`~${nodeId}`).map().once((node, nodeID) => {
-            document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(node);
-        })
-        document.getElementById('time').style.cssText = "";
-    }
-
-    function editorListen(event, editable) {
-        user.get(event.target.id).put(editable.innerHTML)
-        console.log(event)
-        user.get('lastUpdated').put(new Date().toUTCString());
+    async function editorListen(event, editable) {
+        if (event.target.id === 'title') { currentTitle = editable.innerText }
+        var encNode = await SEA.encrypt(editable.innerHTML, urlPassword)
+        user.get('articles').get(hash).get(event.target.id).put(encNode)
+        user.get('articles').get(hash).get('lastUpdated').put(new Date().toUTCString());
     }
 
     async function go() {
         if (window.location.search) {
-            var urlQueryArticleID = window.location.search.slice(2) + window.location.hash
-            var authorPubKey = await gun.get('readthis#').get(urlQueryArticleID).once().then();
-            renderArticle(authorPubKey);
+            urlPassword = new URLSearchParams(window.location.search).get("p");
+            hash = window.location.hash.slice(1)
+            var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
+            gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
+                if (nodeID !== 'lastUpdated') { node = await SEA.decrypt(node, urlPassword) }
+                document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(node);
+            })
+            document.getElementById('time').style.cssText = "";
             var localstorageKeyPair = localStorage.getItem(authorPubKey);
             if (localstorageKeyPair) {
-                var profileKeys = JSON.parse(localstorageKeyPair);
-                user.auth(profileKeys);
+                myKeys = JSON.parse(localstorageKeyPair);
+                user.auth(myKeys);
                 if (user.is) {
                     var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
                     var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
@@ -85,8 +84,10 @@
             } 
         } else {
             myKeys = await SEA.pair();
+            urlPassword = SEA.random(11).toString();
             localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
             user.auth(myKeys);
+            hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
             if (user.is) {
                 var editorTitle = new MediumEditor('#title', {placeholder: {
                     text: 'Title',
