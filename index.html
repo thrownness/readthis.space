@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ReadThis.Space</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A space to write things that should be read! A space to read things that have been written.">
+    <meta property="og:title" content="ReadThis.Space">
+    <meta property="og:description" content="A space to write things that should be read! A space to read things that have been written.">
+    <meta property="og:site_name" content="ReadThis.Space">
+
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+    <link rel="manifest" href="/icons/site.webmanifest">
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/icons/favicon.ico">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="msapplication-config" content="/icons/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="stylesheet" href="https://newcss.net/new.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/js/medium-editor.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/css/medium-editor.min.css" type="text/css" media="screen" charset="utf-8">
+</head>
+
+<body>
+    <div id="app" style="display:none">
+        <h1 id="title"></h1>
+        <p><small id="author"></small></p>
+        <p><small id="time" style="display:none">Last Updated: <span id="lastUpdated"></span></small></p>
+        <div id="content"></div>
+        <button id="publishButton" onclick="publish()" style="display:none">Publish</button>
+        <p id="about" style="display:none"><small><i><a href="/?=welcome-to-readthis.space#gigoz0C7iJswib5l4HF1FyRA8p6KIhDeTEUwl3f2WcM=">Learn more about readthis.space</a></i></small></p>
+    </div>
+<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/radix.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/radisk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/rindexed.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.0.11/dist/purify.min.js"></script>
+<script>
+    const peers = ['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun', 'https://gunjs.herokuapp.com/gun'];
+    const gun = Gun({localStorage: false, peers: peers});
+    const user = gun.user();
+    const SEA = Gun.SEA;
+    var myKeys = {};
+
+    async function publish() {
+        var title = await user.get('title').once().then();
+        var hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
+        var articleID = `${encodeURI(title.replace(/\s+/g, '-').toLowerCase())}#${hash}`;
+        gun.get(`readthis#`).get(articleID).put(myKeys.pub);
+        history.pushState({id: articleID},'', '?='+articleID);
+        location.reload();
+    }
+
+    async function createAccount() {
+        accountKeys = await SEA.pair();
+        login(accountKeys);
+    }
+
+    function login(keys) {
+        localStorage.setItem(keys.pub, JSON.stringify(keys));
+        user.auth(keys);
+        myKeys = keys;
+    }
+
+    function renderArticle(nodeId) {
+        gun.get(`~${nodeId}`).map().once((node, nodeID) => {
+            document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(node);
+        })
+        document.getElementById('time').style.cssText = "";
+    }
+
+    function editorListen(event, editable) {
+        user.get(event.target.id).put(editable.innerHTML)
+        console.log(event)
+        user.get('lastUpdated').put(new Date().toUTCString());
+    }
+
+    async function go() {
+        if (window.location.search) {
+            var urlQueryArticleID = window.location.search.slice(2) + window.location.hash
+            var authorPubKey = await gun.get('readthis#').get(urlQueryArticleID).once().then();
+            renderArticle(authorPubKey);
+            var localstorageKeyPair = localStorage.getItem(authorPubKey);
+            if (localstorageKeyPair) {
+                var profileKeys = JSON.parse(localstorageKeyPair);
+                user.auth(profileKeys);
+                if (user.is) {
+                    var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,});
+                    var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,});
+                    var editorContent = new MediumEditor('#content', {placeholder: false, spellcheck: true});
+                    editorTitle.subscribe('editableInput', editorListen);
+                    editorAuthor.subscribe('editableInput', editorListen);
+                    editorContent.subscribe('editableInput', editorListen);
+                }
+            } 
+        } else {
+            await createAccount();
+            if (user.is) {
+                var editorTitle = new MediumEditor('#title', {placeholder: {
+                    text: 'Title',
+                    hideOnClick: true
+                }, spellcheck: false, disableReturn: true,});
+                var editorAuthor = new MediumEditor('#author', {placeholder: {
+                    text: 'Your name',
+                    hideOnClick: true
+                }, spellcheck: false, disableReturn: true,});
+                var editorContent = new MediumEditor('#content', {placeholder: {
+                    text: 'Your story...',
+                    hideOnClick: true
+                }, spellcheck: true});
+                editorTitle.subscribe('editableInput', editorListen);
+                editorAuthor.subscribe('editableInput', editorListen);
+                editorContent.subscribe('editableInput', editorListen);
+                document.getElementById('publishButton').style.cssText = "";
+                document.getElementById('about').style.cssText = "";
+            }
+        }
+        document.getElementById('app').style.cssText = "";
+    }
+    go();
+</script>
+</body>
+</html>
