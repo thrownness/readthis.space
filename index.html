@@ -52,17 +52,6 @@
         location.reload();
     }
 
-    async function createAccount() {
-        accountKeys = await SEA.pair();
-        login(accountKeys);
-    }
-
-    function login(keys) {
-        localStorage.setItem(keys.pub, JSON.stringify(keys));
-        user.auth(keys);
-        myKeys = keys;
-    }
-
     function renderArticle(nodeId) {
         gun.get(`~${nodeId}`).map().once((node, nodeID) => {
             document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(node);
@@ -95,7 +84,9 @@
                 }
             } 
         } else {
-            await createAccount();
+            myKeys = await SEA.pair();
+            localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
+            user.auth(myKeys);
             if (user.is) {
                 var editorTitle = new MediumEditor('#title', {placeholder: {
                     text: 'Title',
