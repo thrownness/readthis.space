@@ -86,8 +86,8 @@
                 var profileKeys = JSON.parse(localstorageKeyPair);
                 user.auth(profileKeys);
                 if (user.is) {
-                    var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,});
-                    var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,});
+                    var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                    var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
                     var editorContent = new MediumEditor('#content', {placeholder: false, spellcheck: true});
                     editorTitle.subscribe('editableInput', editorListen);
                     editorAuthor.subscribe('editableInput', editorListen);
@@ -100,11 +100,11 @@
                 var editorTitle = new MediumEditor('#title', {placeholder: {
                     text: 'Title',
                     hideOnClick: true
-                }, spellcheck: false, disableReturn: true,});
+                }, spellcheck: false, disableReturn: true,toolbar: false});
                 var editorAuthor = new MediumEditor('#author', {placeholder: {
                     text: 'Your name',
                     hideOnClick: true
-                }, spellcheck: false, disableReturn: true,});
+                }, spellcheck: false, disableReturn: true,toolbar: false});
                 var editorContent = new MediumEditor('#content', {placeholder: {
                     text: 'Your story...',
                     hideOnClick: true
