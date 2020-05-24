@@ -90,7 +90,8 @@
         if (event.target.id === 'title') { currentTitle = editable.innerText }
         var encNode = await SEA.encrypt(editable.innerHTML, urlPassword)
         user.get('articles').get(hash).get(event.target.id).put(encNode)
-        user.get('articles').get(hash).get('lastUpdated').put(new Date().toUTCString());
+        var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
+        user.get('articles').get(hash).get('lastUpdated').put(encTime);
     }
 
     async function go() {
@@ -99,8 +100,8 @@
             hash = window.location.hash.slice(1)
             var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
             gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
-                if (nodeID !== 'lastUpdated') { node = await SEA.decrypt(node, urlPassword) }
-                document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(node);
+                var decNode = await SEA.decrypt(node, urlPassword);
+                document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
             })
             document.getElementById('time').style.cssText = "";
             var localstorageKeyPair = localStorage.getItem(authorPubKey);
