@@ -23,13 +23,20 @@
     <script src="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/js/medium-editor.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/css/medium-editor.min.css" type="text/css" media="screen" charset="utf-8">
     <style>
+        .meta { font-size: small; }
         #savedText {
+            color: var(--nc-tx-2);
+            background-color: var(--nc-bg-1);
+            left: 0;
+            right: 0;
+            top: 0;
+            position: fixed;
             text-align: center;
             opacity: 0;
         }
         .fadeInAndOut {
-            -webkit-animation: fadeinout 1s linear forwards;
-            animation: fadeinout 1s linear forwards;
+            -webkit-animation: fadeinout 2.5s ease-out forwards;
+            animation: fadeinout 2.5s ease-out forwards;
         }
         @-webkit-keyframes fadeinout { 50% { opacity: 1; } }
         @keyframes fadeinout { 50% { opacity: 1; } }
@@ -40,11 +47,14 @@
     <div id="app" style="display:none">
         <p id="savedText">Saved</p>
         <h1 id="title"></h1>
-        <p><small id="author"></small></p>
-        <p><small id="time" style="display:none">Last Updated: <span id="lastUpdated"></span></small></p>
+        <div class="meta"> 
+            <p id="time" style="display:none;">Last Updated: <span id="lastUpdated"></span></p>
+            <p id="author"></p>
+        </div>
         <div id="content"></div>
-        <button id="publishButton" onclick="publish()" style="display:none">Publish</button>
-        <button id="deleteButton" onclick="deleteArticle()" style="background-color:#DF2935;display:none">😨 Delete 😨</button>
+        <hr>
+        <p><button id="publishButton" onclick="publish()" style="display:none">🔗 Create Link</button></p>
+        <p><button id="deleteButton" onclick="deleteArticle()" style="background-color:#DF2935;display:none">🗑️ Delete</button></p>
         <p id="about" style="display:none"><small><i><a href="https://github.com/thrownness/readthis.space/blob/master/README.md">Learn more about readthis.space</a></i></small></p>
     </div>
 <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
@@ -103,7 +113,7 @@
                 var decNode = await SEA.decrypt(node, urlPassword);
                 document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
             })
-            document.getElementById('time').style.cssText = "";
+            document.getElementById('time').style.display = "";
             var localstorageKeyPair = localStorage.getItem(authorPubKey);
             if (localstorageKeyPair) {
                 myKeys = JSON.parse(localstorageKeyPair);
@@ -117,7 +127,7 @@
                     editorContent.subscribe('editableInput', debounce(editorListen, 1000));
                     document.getElementById('deleteButton').style.display = "";
                 }
-            } 
+            }
         } else {
             myKeys = await SEA.pair();
             urlPassword = SEA.random(11).toString();
@@ -127,15 +137,15 @@
             if (user.is) {
                 var editorTitle = new MediumEditor('#title', {placeholder: {
                     text: 'Title',
-                    hideOnClick: true
+                    hideOnClick: false
                 }, spellcheck: false, disableReturn: true,toolbar: false});
                 var editorAuthor = new MediumEditor('#author', {placeholder: {
                     text: 'Your name',
-                    hideOnClick: true
+                    hideOnClick: false
                 }, spellcheck: false, disableReturn: true,toolbar: false});
                 var editorContent = new MediumEditor('#content', {placeholder: {
                     text: 'Your story...',
-                    hideOnClick: true
+                    hideOnClick: false
                 }, spellcheck: true});
                 editorTitle.subscribe('editableInput', debounce(editorListen, 1000));
                 editorAuthor.subscribe('editableInput', debounce(editorListen, 1000));
