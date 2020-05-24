@@ -10,13 +10,13 @@ It's a decentralized throwaway authoring platform.
 
 ## Usage 
 
-**Write** an article, manifesto, todo list, product roadmap, whatever! **Share** the link with your friends directly or post it on a social platform. Painless. Done.
+**Write** an article, manifesto, todo list, product roadmap, whatever! The data will save after a second of you not typing.
+
+To **share** the article, hit the Publish button and share the URL with your friends directly or post it on a social platform. Painless. Done.
 
 As long as someone has the URL link, they can **read** the article. If they don't, they can't!
 
-As long as your key remains in your browser's `localStorage`, you can **update** your article when you revisit the URL from the same browser. 
-
-If you want to **delete** your article, just replace the title, author, and content with a single letter or a space (`" "`). The next time that someone accesses your article, they will see a blank page!
+As long as your key remains in your browser's `localStorage`, you can **update** your article when you revisit the URL from the same browser. Or hit the **delete** button to... delete it :)
 
 ## Why does this exist?
 
