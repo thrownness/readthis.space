@@ -54,7 +54,7 @@
         <div id="content"></div>
         <hr>
         <p><button id="publishButton" onclick="publish()" style="display:none">🔗 Create Link</button></p>
-        <p><button id="deleteButton" onclick="deleteArticle()" style="float:right;background-color:#DF2935;display:none">🗑️ Delete</button></p>
+        <p><button id="deleteButton" onclick="deleteArticle(this)" style="float:right;background-color:#DF2935;display:none">🗑️ Delete</button></p>
         <p><button id="copyButton" onclick="copyLink(this)" style="display:none">🔗 Copy Link</button></p>
         <p id="about" style="display:none"><small><i><a href="https://github.com/thrownness/readthis.space/blob/master/README.md">Learn more about readthis.space</a></i></small></p>
     </div>
@@ -86,16 +86,18 @@
 
     function copyLink(buttonElement) {
         navigator.clipboard.writeText(location.href).then(function() {
-            buttonElement.insertAdjacentHTML('afterend', '<p class="meta">Copied!<p>')
+            buttonElement.innerText = 'Copied! 👍';
         }, function() {
-            buttonElement.insertAdjacentHTML('afterend', '<p class="meta">Copy permissions denied.<p>')
+            buttonElement.innerText = 'Copy permissions denied. 👎';
         });
     }
 
-    function deleteArticle() {
+    function deleteArticle(buttonElement) {
         user.get('articles').get(hash).map().once((node, nodeID) => {
             user.get('articles').get(hash).get(nodeID).put(null);
         })
+        localStorage.removeItem(myKeys.pub);
+        buttonElement.innerText = 'Deleted! 👍';
     }
 
     function debounce(func, delay) {
@@ -123,7 +125,7 @@
     
     async function go() {
         if (window.location.search) {
-            urlPassword = decodeURIComponent(new URLSearchParams(window.location.search).get("p")).toString().replace(/~pct~/g,'%');
+            urlPassword = decodeURIComponent(new URLSearchParams(window.location.search).get("p"));
             hash = window.location.hash.slice(1)
             var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
             gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
@@ -148,7 +150,7 @@
             document.getElementById('copyButton').style.display = "";
         } else {
             myKeys = await SEA.pair();
-            urlPassword = SEA.random(9).toString().replace(/%/g,'~pct~');
+            urlPassword = SEA.random(11).toString();
             user.auth(myKeys);
             hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
             if (user.is) {
