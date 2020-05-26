@@ -4,9 +4,9 @@
     <title>ReadThis.Space</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A space to write things that should be read! A space to read things that have been written.">
+    <meta name="description" content="A decentralized, throwaway authoring platform.">
     <meta property="og:title" content="ReadThis.Space">
-    <meta property="og:description" content="A space to write things that should be read! A space to read things that have been written.">
+    <meta property="og:description" content="A decentralized, throwaway authoring platform.">
     <meta property="og:site_name" content="ReadThis.Space">
 
     <link rel="apple-touch-icon" sizes="120x120" href="/icons/apple-touch-icon.png">
@@ -35,8 +35,8 @@
             opacity: 0;
         }
         .fadeInAndOut {
-            -webkit-animation: fadeinout 2.5s ease-out forwards;
-            animation: fadeinout 2.5s ease-out forwards;
+            -webkit-animation: fadeinout 2s ease-out forwards;
+            animation: fadeinout 2s ease-out forwards;
         }
         @-webkit-keyframes fadeinout { 50% { opacity: 1; } }
         @keyframes fadeinout { 50% { opacity: 1; } }
@@ -49,20 +49,25 @@
         <h1 id="title"></h1>
         <div class="meta"> 
             <p id="time" style="display:none;">Last Updated: <span id="lastUpdated"></span></p>
-            <p id="author"></p>
+            <b><p id="author"></p></b>
         </div>
         <div id="content"></div>
         <hr>
         <p><button id="publishButton" onclick="publish()" style="display:none">🔗 Create Link</button></p>
-        <p><button id="deleteButton" onclick="deleteArticle()" style="background-color:#DF2935;display:none">🗑️ Delete</button></p>
+        <p><button id="deleteButton" onclick="deleteArticle()" style="float:right;background-color:#DF2935;display:none">🗑️ Delete</button></p>
+        <p><button id="copyButton" onclick="copyLink(this)" style="display:none">🔗 Copy Link</button></p>
         <p id="about" style="display:none"><small><i><a href="https://github.com/thrownness/readthis.space/blob/master/README.md">Learn more about readthis.space</a></i></small></p>
     </div>
 <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/radix.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/radisk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/lib/rindexed.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@2.0.11/dist/purify.min.js"></script>
 <script>
     const peers = ['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun', 'https://gunjs.herokuapp.com/gun'];
-    const gun = Gun(peers);
+    const gun = Gun({localStorage:false, peers:peers});
     const user = gun.user();
     const SEA = Gun.SEA;
     var myKeys = {};
@@ -71,10 +76,20 @@
     var hash = '';
     const savedTextEl = document.getElementById('savedText');
 
-    async function publish() {
+    function publish() {
+        localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
         gun.get(`readthis.space#`).get(hash).put(myKeys.pub);
-        history.pushState({},'', `?t=${encodeURI(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`);
+        var url = `?t=${encodeURI(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${encodeURI(urlPassword)}#${hash}`
+        history.pushState({},'', url);
         location.reload();
+    }
+
+    function copyLink(buttonElement) {
+        navigator.clipboard.writeText(location.href).then(function() {
+            buttonElement.insertAdjacentHTML('afterend', '<p class="meta">Copied!<p>')
+        }, function() {
+            buttonElement.insertAdjacentHTML('afterend', '<p class="meta">Copy permissions denied.<p>')
+        });
     }
 
     function deleteArticle() {
@@ -93,20 +108,22 @@
         }
     }
 
-    async function editorListen(event, editable) {
-        savedTextEl.classList.remove('fadeInAndOut')
+    async function save(event, editable) {
+        savedTextEl.classList.remove('fadeInAndOut');
         void savedTextEl.offsetWidth;
-        savedTextEl.classList.add('fadeInAndOut')
+        
         if (event.target.id === 'title') { currentTitle = editable.innerText }
         var encNode = await SEA.encrypt(editable.innerHTML, urlPassword)
         user.get('articles').get(hash).get(event.target.id).put(encNode)
         var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
         user.get('articles').get(hash).get('lastUpdated').put(encTime);
-    }
 
+        savedTextEl.classList.add('fadeInAndOut');
+    }
+    
     async function go() {
         if (window.location.search) {
-            urlPassword = new URLSearchParams(window.location.search).get("p");
+            urlPassword = decodeURIComponent(new URLSearchParams(window.location.search).get("p"));
             hash = window.location.hash.slice(1)
             var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
             gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
@@ -122,16 +139,16 @@
                     var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
                     var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
                     var editorContent = new MediumEditor('#content', {placeholder: false, spellcheck: true});
-                    editorTitle.subscribe('editableInput', debounce(editorListen, 1000));
-                    editorAuthor.subscribe('editableInput', debounce(editorListen, 1000));
-                    editorContent.subscribe('editableInput', debounce(editorListen, 1000));
+                    editorTitle.subscribe('editableInput', debounce(save, 1000));
+                    editorAuthor.subscribe('editableInput', debounce(save, 1000));
+                    editorContent.subscribe('editableInput', debounce(save, 1000));
                     document.getElementById('deleteButton').style.display = "";
                 }
             }
+            document.getElementById('copyButton').style.display = "";
         } else {
             myKeys = await SEA.pair();
             urlPassword = SEA.random(11).toString();
-            localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
             user.auth(myKeys);
             hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
             if (user.is) {
@@ -147,9 +164,9 @@
                     text: 'Your story...',
                     hideOnClick: false
                 }, spellcheck: true});
-                editorTitle.subscribe('editableInput', debounce(editorListen, 1000));
-                editorAuthor.subscribe('editableInput', debounce(editorListen, 1000));
-                editorContent.subscribe('editableInput', debounce(editorListen, 1000));
+                editorTitle.subscribe('editableInput', debounce(save, 1000));
+                editorAuthor.subscribe('editableInput', debounce(save, 1000));
+                editorContent.subscribe('editableInput', debounce(save, 1000));
                 document.getElementById('publishButton').style.cssText = "";
                 document.getElementById('about').style.cssText = "";
             }
