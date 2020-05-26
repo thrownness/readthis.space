@@ -79,7 +79,7 @@
     function publish() {
         localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
         gun.get(`readthis.space#`).get(hash).put(myKeys.pub);
-        var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${encodeURIComponent(urlPassword)}#${hash}`
+        var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
         history.pushState({},'', url);
         location.reload();
     }
@@ -125,7 +125,7 @@
     
     async function go() {
         if (window.location.search) {
-            urlPassword = decodeURIComponent(new URLSearchParams(window.location.search).get("p"));
+            urlPassword = new URLSearchParams(window.location.search).get("p");
             hash = window.location.hash.slice(1)
             var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
             gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
@@ -150,7 +150,7 @@
             document.getElementById('copyButton').style.display = "";
         } else {
             myKeys = await SEA.pair();
-            urlPassword = SEA.random(11).toString();
+            urlPassword = SEA.random(11).toString('hex');
             user.auth(myKeys);
             hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
             if (user.is) {
