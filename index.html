@@ -58,93 +58,130 @@
         <p><button id="copyButton" onclick="copyLink(this)" style="display:none">🔗 Copy Link</button></p>
         <p id="about" style="display:none"><small><i><a href="https://github.com/thrownness/readthis.space/blob/master/README.md">Learn more about readthis.space</a></i></small></p>
     </div>
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/lib/radix.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/lib/radisk.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/lib/rindexed.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@2.0.11/dist/purify.min.js"></script>
-<script src="./lib/MediumEditorAutolist.js"></script>
-<script>
-    const peers = ['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun', 'https://gunjs.herokuapp.com/gun'];
-    const gun = Gun({localStorage:false, peers:peers});
-    const user = gun.user();
-    const SEA = Gun.SEA;
-    var myKeys = {};
-    var urlPassword = '';
-    var currentTitle = '';
-    var hash = '';
-    const savedTextEl = document.getElementById('savedText');
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/radix.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/radisk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/rindexed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.0.11/dist/purify.min.js"></script>
+    <script src="./lib/MediumEditorAutolist.js"></script>
+    <script>
+        const peers = ['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun', 'https://gunjs.herokuapp.com/gun'];
+        const gun = Gun({localStorage:false, peers:peers});
+        const user = gun.user();
+        const SEA = Gun.SEA;
+        var myKeys = {};
+        var urlPassword = '';
+        var currentTitle = '';
+        var hash = '';
+        const savedTextEl = document.getElementById('savedText');
 
-    function publish() {
-        localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
-        gun.get(`readthis.space#`).get(hash).put(myKeys.pub);
-        var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
-        history.pushState({},'', url);
-        location.reload();
-    }
-
-    function copyLink(buttonElement) {
-        navigator.clipboard.writeText(location.href).then(function() {
-            buttonElement.innerText = 'Copied! 👍';
-        }, function() {
-            buttonElement.innerText = 'Copy permissions denied. 👎';
-        });
-    }
-
-    function deleteArticle(buttonElement) {
-        user.get('articles').get(hash).map().once((node, nodeID) => {
-            user.get('articles').get(hash).get(nodeID).put(null);
-        })
-        localStorage.removeItem(myKeys.pub);
-        buttonElement.innerText = 'Deleted! 👍';
-    }
-
-    function debounce(func, delay) {
-        let inDebounce
-        return function() {
-            const context = this
-            const args = arguments
-            clearTimeout(inDebounce)
-            inDebounce = setTimeout(() => func.apply(context, args), delay)
+        function publish() {
+            localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
+            gun.get(`readthis.space#`).get(hash).put(myKeys.pub);
+            var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
+            history.pushState({},'', url);
+            location.reload();
         }
-    }
 
-    async function save(event, editable) {
-        savedTextEl.classList.remove('fadeInAndOut');
-        void savedTextEl.offsetWidth;
-        
-        if (event.target.id === 'title') { currentTitle = editable.innerText }
-        var encNode = await SEA.encrypt(editable.innerHTML, urlPassword)
-        user.get('articles').get(hash).get(event.target.id).put(encNode)
-        var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
-        user.get('articles').get(hash).get('lastUpdated').put(encTime);
+        function copyLink(buttonElement) {
+            navigator.clipboard.writeText(location.href).then(function() {
+                buttonElement.innerText = 'Copied! 👍';
+            }, function() {
+                buttonElement.innerText = 'Copy permissions denied. 👎';
+            });
+        }
 
-        savedTextEl.classList.add('fadeInAndOut');
-    }
-    
-    async function go() {
-        if (window.location.search) {
-            urlPassword = new URLSearchParams(window.location.search).get("p");
-            hash = window.location.hash.slice(1)
-            var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
-            gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
-                var decNode = await SEA.decrypt(node, urlPassword);
-                document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+        function deleteArticle(buttonElement) {
+            user.get('articles').get(hash).map().once((node, nodeID) => {
+                user.get('articles').get(hash).get(nodeID).put(null);
             })
-            document.getElementById('time').style.display = "";
-            var localstorageKeyPair = localStorage.getItem(authorPubKey);
-            if (localstorageKeyPair) {
-                myKeys = JSON.parse(localstorageKeyPair);
+            localStorage.removeItem(myKeys.pub);
+            buttonElement.innerText = 'Deleted! 👍';
+        }
+
+        function debounce(func, delay) {
+            let inDebounce
+            return function() {
+                const context = this
+                const args = arguments
+                clearTimeout(inDebounce)
+                inDebounce = setTimeout(() => func.apply(context, args), delay)
+            }
+        }
+
+        async function save(event, editable) {
+            savedTextEl.classList.remove('fadeInAndOut');
+            void savedTextEl.offsetWidth;
+            
+            if (event.target.id === 'title') { currentTitle = editable.innerText }
+            var encNode = await SEA.encrypt(editable.innerHTML, urlPassword)
+            user.get('articles').get(hash).get(event.target.id).put(encNode)
+            var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
+            user.get('articles').get(hash).get('lastUpdated').put(encTime);
+
+            savedTextEl.classList.add('fadeInAndOut');
+        }
+        
+        async function go() {
+            if (window.location.search) {
+                urlPassword = new URLSearchParams(window.location.search).get("p");
+                hash = window.location.hash.slice(1)
+                var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
+                gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
+                    var decNode = await SEA.decrypt(node, urlPassword);
+                    document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+                })
+                document.getElementById('time').style.display = "";
+                var localstorageKeyPair = localStorage.getItem(authorPubKey);
+                if (localstorageKeyPair) {
+                    myKeys = JSON.parse(localstorageKeyPair);
+                    user.auth(myKeys);
+                    if (user.is) {
+                        var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                        var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                        var autolist = new AutoList();
+                        var editorContent = new MediumEditor('#content', {
+                            placeholder: false, 
+                            spellcheck: true, 
+                            toolbar: { 
+                                buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
+                            },
+                            extensions: {
+                                'autolist': autolist
+                            }
+                        });
+                        editorTitle.subscribe('editableInput', debounce(save, 1000));
+                        editorAuthor.subscribe('editableInput', debounce(save, 1000));
+                        editorContent.subscribe('editableInput', debounce(save, 1000));
+                        document.getElementById('deleteButton').style.display = "";
+                    }
+                }
+                document.getElementById('copyButton').style.display = "";
+            } else {
+                myKeys = await SEA.pair();
+                urlPassword = SEA.random(11).toString('hex');
                 user.auth(myKeys);
+                hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
                 if (user.is) {
-                    var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
-                    var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                    var encPass = await SEA.encrypt(urlPassword, myKeys);
+                    user.get('articles').get(hash).get('pass').put(encPass);
+                    var editorTitle = new MediumEditor('#title', {placeholder: {
+                        text: 'Title',
+                        hideOnClick: false
+                    }, spellcheck: false, disableReturn: true,toolbar: false});
+                    var editorAuthor = new MediumEditor('#author', {placeholder: {
+                        text: 'Your name',
+                        hideOnClick: false
+                    }, spellcheck: false, disableReturn: true,toolbar: false});
                     var autolist = new AutoList();
                     var editorContent = new MediumEditor('#content', {
-                        placeholder: false, 
-                        spellcheck: true, 
+                        placeholder: {
+                            text: 'Your story...',
+                            hideOnClick: false
+                        }, 
+                        spellcheck: true,
                         toolbar: { 
                             buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
                         },
@@ -155,48 +192,13 @@
                     editorTitle.subscribe('editableInput', debounce(save, 1000));
                     editorAuthor.subscribe('editableInput', debounce(save, 1000));
                     editorContent.subscribe('editableInput', debounce(save, 1000));
-                    document.getElementById('deleteButton').style.display = "";
+                    document.getElementById('publishButton').style.cssText = "";
+                    document.getElementById('about').style.cssText = "";
                 }
             }
-            document.getElementById('copyButton').style.display = "";
-        } else {
-            myKeys = await SEA.pair();
-            urlPassword = SEA.random(11).toString('hex');
-            user.auth(myKeys);
-            hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
-            if (user.is) {
-                var editorTitle = new MediumEditor('#title', {placeholder: {
-                    text: 'Title',
-                    hideOnClick: false
-                }, spellcheck: false, disableReturn: true,toolbar: false});
-                var editorAuthor = new MediumEditor('#author', {placeholder: {
-                    text: 'Your name',
-                    hideOnClick: false
-                }, spellcheck: false, disableReturn: true,toolbar: false});
-                var autolist = new AutoList();
-                var editorContent = new MediumEditor('#content', {
-                    placeholder: {
-                        text: 'Your story...',
-                        hideOnClick: false
-                    }, 
-                    spellcheck: true,
-                    toolbar: { 
-                        buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
-                    },
-                    extensions: {
-                        'autolist': autolist
-                    }
-                });
-                editorTitle.subscribe('editableInput', debounce(save, 1000));
-                editorAuthor.subscribe('editableInput', debounce(save, 1000));
-                editorContent.subscribe('editableInput', debounce(save, 1000));
-                document.getElementById('publishButton').style.cssText = "";
-                document.getElementById('about').style.cssText = "";
-            }
+            document.getElementById('app').style.cssText = "";
         }
-        document.getElementById('app').style.cssText = "";
-    }
-    go();
-</script>
+        go();
+    </script>
 </body>
 </html>
