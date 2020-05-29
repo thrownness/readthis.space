@@ -20,6 +20,8 @@ As long as someone has the URL link, they can **read** the article. If they don'
 
 As long as your key remains in your browser's `localStorage`, you can **update** your article when you revisit the URL from the same browser. Or hit the `🗑️ Delete` button to... delete it :)
 
+If you shared your article on a service like Twitter, put the twitter post link in the article content to **verify** or **prove** that you wrote the article. 
+
 ### Privacy
 
 The title, author name, last updated time, and article content are all encrypted. The only way to decrypt is if you have the password that is in the generated link. The password is not stored anywhere other than in the link itself. The article details are not stored in plain text anywhere either.

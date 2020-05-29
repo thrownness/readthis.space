@@ -130,8 +130,10 @@
                 hash = window.location.hash.slice(1)
                 var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
                 gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
-                    var decNode = await SEA.decrypt(node, urlPassword);
-                    document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+                    if (nodeID !== 'pass') {
+                        var decNode = await SEA.decrypt(node, urlPassword);
+                        document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+                    }
                 })
                 document.getElementById('time').style.display = "";
                 var localstorageKeyPair = localStorage.getItem(authorPubKey);
@@ -145,6 +147,7 @@
                         var editorContent = new MediumEditor('#content', {
                             placeholder: false, 
                             spellcheck: true, 
+                            autoLink: true,
                             toolbar: { 
                                 buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
                             },
@@ -182,6 +185,7 @@
                             hideOnClick: false
                         }, 
                         spellcheck: true,
+                        autoLink: true,
                         toolbar: { 
                             buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
                         },
