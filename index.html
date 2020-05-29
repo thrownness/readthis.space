@@ -66,6 +66,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/promise.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/radix.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/radisk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
@@ -83,14 +84,12 @@
         var hash = '';
         const savedTextEl = document.getElementById('savedText');
 
-        function publish() {
+        async function publish() {
             localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
-            gun.get(`readthis.space#`).get(hash).put(myKeys.pub); 
-            setTimeout(() => { 
-                var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
-                history.pushState({},'', url);
-                location.reload();
-            }, 1000);
+            await gun.get(`readthis.space#`).get(hash).promPut(myKeys.pub); 
+            var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
+            history.pushState({},'', url);
+            location.reload();
         }
 
         function copyLink(buttonElement) {
@@ -102,8 +101,8 @@
         }
 
         function deleteArticle(buttonElement) {
-            user.get('articles').get(hash).map().once((node, nodeID) => {
-                user.get('articles').get(hash).get(nodeID).put(null);
+            user.get('articles').get(hash).map().once(async (node, nodeID) => {
+                user.get('articles').get(hash).get(nodeID).promPut(null);
             })
             localStorage.removeItem(myKeys.pub);
             buttonElement.innerText = 'Deleted! 👍';
@@ -132,12 +131,11 @@
                 name = event.target.id
                 content = editable.innerHTML;
             }
-            console.log(name, content);
             if (name === 'title') { currentTitle = editable.innerText }
             var encNode = await SEA.encrypt(content, urlPassword)
-            user.get('articles').get(hash).get(name).put(encNode)
+            await user.get('articles').get(hash).get(name).promPut(encNode)
             var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
-            user.get('articles').get(hash).get('lastUpdated').put(encTime);
+            await user.get('articles').get(hash).get('lastUpdated').promPut(encTime);
 
             savedTextEl.classList.add('fadeInAndOut');
         }
@@ -232,26 +230,25 @@
             if (window.location.search) {
                 urlPassword = new URLSearchParams(window.location.search).get("p");
                 hash = window.location.hash.slice(1)
-                var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
-                setTimeout(() => {
-                    var localstorageKeyPair = localStorage.getItem(authorPubKey);
-                    if (localstorageKeyPair) {
-                        myKeys = JSON.parse(localstorageKeyPair);
-                        user.auth(myKeys);
-                        if (user.is) {
-                            renderArticle(authorPubKey, hash, 'update');
-                        }
-                    } else {
-                        renderArticle(authorPubKey, hash, 'read');
+                var authorPubKey = await gun.get('readthis.space#').get(hash).promOnce();
+                authorPubKey = authorPubKey.data
+                var localstorageKeyPair = localStorage.getItem(authorPubKey);
+                if (localstorageKeyPair) {
+                    myKeys = JSON.parse(localstorageKeyPair);
+                    user.auth(myKeys);
+                    if (user.is) {
+                        renderArticle(authorPubKey, hash, 'update');
                     }
-                }, 1000)
+                } else {
+                    renderArticle(authorPubKey, hash, 'read');
+                }
             } else {
                 myKeys = await SEA.pair();
                 urlPassword = SEA.random(11).toString('hex');
                 user.auth(myKeys);
                 hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
                 var encPass = await SEA.encrypt(urlPassword, myKeys);
-                user.get('articles').get(hash).get('pass').put(encPass);
+                await user.get('articles').get(hash).get('pass').promPut(encPass);
                 renderArticle(myKeys.pub, hash, 'create');
             }
         }
