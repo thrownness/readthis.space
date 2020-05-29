@@ -233,7 +233,7 @@
                 urlPassword = new URLSearchParams(window.location.search).get("p");
                 hash = window.location.hash.slice(1)
                 var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
-                //setTimeout(() => {
+                setTimeout(() => {
                     var localstorageKeyPair = localStorage.getItem(authorPubKey);
                     if (localstorageKeyPair) {
                         myKeys = JSON.parse(localstorageKeyPair);
@@ -244,7 +244,7 @@
                     } else {
                         renderArticle(authorPubKey, hash, 'read');
                     }
-                //}, 1000)
+                }, 1000)
             } else {
                 myKeys = await SEA.pair();
                 urlPassword = SEA.random(11).toString('hex');
