@@ -23,7 +23,7 @@
     <script src="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/js/medium-editor.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/css/medium-editor.min.css" type="text/css" media="screen" charset="utf-8">
     <style>
-        .meta { font-size: small; }
+        #meta { font-size: small; }
         #savedText {
             color: var(--nc-tx-2);
             background-color: var(--nc-bg-1);
@@ -47,11 +47,17 @@
     <div id="app" style="display:none">
         <p id="savedText">Saved</p>
         <h1 id="title"></h1>
-        <div class="meta"> 
-            <p id="time" style="display:none;">Last Updated: <span id="lastUpdated"></span></p>
+        
             <b><p id="author"></p></b>
-        </div>
+       
         <div id="content"></div>
+        <div id="meta" style="display:none;"> 
+            <hr>
+            <p id="time" >🕙 <span id="lastUpdated"></span></p>
+            <div id="verificationSection" style="display:none;">
+                <label>✔️ </label><input onchange="save(this)" id="verification" placeholder="Verify authorship with a link to a social media post"></input>
+            </div>
+        </div>
         <hr>
         <p><button id="publishButton" onclick="publish()" style="display:none">🔗 Create Link</button></p>
         <p><button id="deleteButton" onclick="deleteArticle(this)" style="float:right;background-color:#DF2935;display:none">🗑️ Delete</button></p>
@@ -79,10 +85,12 @@
 
         function publish() {
             localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
-            gun.get(`readthis.space#`).get(hash).put(myKeys.pub);
-            var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
-            history.pushState({},'', url);
-            location.reload();
+            gun.get(`readthis.space#`).get(hash).put(myKeys.pub); 
+            setTimeout(() => { 
+                var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
+                history.pushState({},'', url);
+                location.reload();
+            }, 1000);
         }
 
         function copyLink(buttonElement) {
@@ -115,13 +123,109 @@
             savedTextEl.classList.remove('fadeInAndOut');
             void savedTextEl.offsetWidth;
             
-            if (event.target.id === 'title') { currentTitle = editable.innerText }
-            var encNode = await SEA.encrypt(editable.innerHTML, urlPassword)
-            user.get('articles').get(hash).get(event.target.id).put(encNode)
+            var content = '';
+            var name = '';
+            if (event.id){
+                name = event.id
+                content = event.value
+            } else if (event.target) {
+                name = event.target.id
+                content = editable.innerHTML;
+            }
+            console.log(name, content);
+            if (name === 'title') { currentTitle = editable.innerText }
+            var encNode = await SEA.encrypt(content, urlPassword)
+            user.get('articles').get(hash).get(name).put(encNode)
             var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
             user.get('articles').get(hash).get('lastUpdated').put(encTime);
 
             savedTextEl.classList.add('fadeInAndOut');
+        }
+
+        function renderArticle(authorPub, articleHash, audienceType) {
+            if (audienceType == 'create') {
+                var editorTitle = new MediumEditor('#title', {placeholder: {
+                    text: 'Title',
+                    hideOnClick: false
+                }, spellcheck: false, disableReturn: true,toolbar: false});
+                var editorAuthor = new MediumEditor('#author', {placeholder: {
+                    text: 'Your name',
+                    hideOnClick: false
+                }, spellcheck: false, disableReturn: true,toolbar: false});
+                var autolist = new AutoList();
+                var editorContent = new MediumEditor('#content', {
+                    placeholder: {
+                        text: 'Your story...',
+                        hideOnClick: false
+                    }, 
+                    spellcheck: true,
+                    autoLink: true,
+                    toolbar: { 
+                        buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
+                    },
+                    extensions: {
+                        'autolist': autolist
+                    }
+                });
+                editorTitle.subscribe('editableInput', debounce(save, 1000));
+                editorAuthor.subscribe('editableInput', debounce(save, 1000));
+                editorContent.subscribe('editableInput', debounce(save, 1000));
+
+                document.getElementById('publishButton').style.cssText = "";
+                document.getElementById('about').style.cssText = "";
+            } 
+            else if (audienceType == 'read') {
+                gun.get(`~${authorPub}`).get('articles').get(articleHash).map().once(async (node, nodeID) => {
+                    if (nodeID !== 'pass') {
+                        var decNode = await SEA.decrypt(node, urlPassword);
+                        if (nodeID == 'verification') {
+                            document.getElementById('verification').outerHTML = `<a href="${DOMPurify.sanitize(decNode)}">${DOMPurify.sanitize(decNode)}</a>`;
+                            document.getElementById('verificationSection').style.display = "";
+                        } else {
+                            document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+                        }
+                    }
+                })
+                document.getElementById('meta').style.display = "";
+                document.getElementById('copyButton').style.display = "";
+            } 
+            else if (audienceType == 'update') {
+                gun.get(`~${authorPub}`).get('articles').get(articleHash).map().once(async (node, nodeID) => {
+                    if (nodeID !== 'pass') {
+                        var decNode = await SEA.decrypt(node, urlPassword);
+                        if (nodeID == 'verification') {
+                            document.getElementById(nodeID).value = DOMPurify.sanitize(decNode);
+                        } else {
+                            document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+                        }
+                    }
+                })
+                
+                var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                
+                var autolist = new AutoList();
+                var editorContent = new MediumEditor('#content', {
+                    placeholder: false, 
+                    spellcheck: true, 
+                    autoLink: true,
+                    toolbar: { 
+                        buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
+                    },
+                    extensions: {
+                        'autolist': autolist
+                    }
+                });
+                editorTitle.subscribe('editableInput', debounce(save, 1000));
+                editorAuthor.subscribe('editableInput', debounce(save, 1000));
+                editorContent.subscribe('editableInput', debounce(save, 1000));
+
+                document.getElementById('meta').style.display = "";
+                document.getElementById('copyButton').style.display = "";
+                document.getElementById('verificationSection').style.display = "";
+                document.getElementById('deleteButton').style.display = "";
+            }
+            document.getElementById('app').style.cssText = "";
         }
         
         async function go() {
@@ -129,78 +233,27 @@
                 urlPassword = new URLSearchParams(window.location.search).get("p");
                 hash = window.location.hash.slice(1)
                 var authorPubKey = await gun.get('readthis.space#').get(hash).once().then();
-                gun.get(`~${authorPubKey}`).get('articles').get(hash).map().once(async (node, nodeID) => {
-                    if (nodeID !== 'pass') {
-                        var decNode = await SEA.decrypt(node, urlPassword);
-                        document.getElementById(nodeID).innerHTML = DOMPurify.sanitize(decNode);
+                //setTimeout(() => {
+                    var localstorageKeyPair = localStorage.getItem(authorPubKey);
+                    if (localstorageKeyPair) {
+                        myKeys = JSON.parse(localstorageKeyPair);
+                        user.auth(myKeys);
+                        if (user.is) {
+                            renderArticle(authorPubKey, hash, 'update');
+                        }
+                    } else {
+                        renderArticle(authorPubKey, hash, 'read');
                     }
-                })
-                document.getElementById('time').style.display = "";
-                var localstorageKeyPair = localStorage.getItem(authorPubKey);
-                if (localstorageKeyPair) {
-                    myKeys = JSON.parse(localstorageKeyPair);
-                    user.auth(myKeys);
-                    if (user.is) {
-                        var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
-                        var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
-                        var autolist = new AutoList();
-                        var editorContent = new MediumEditor('#content', {
-                            placeholder: false, 
-                            spellcheck: true, 
-                            autoLink: true,
-                            toolbar: { 
-                                buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
-                            },
-                            extensions: {
-                                'autolist': autolist
-                            }
-                        });
-                        editorTitle.subscribe('editableInput', debounce(save, 1000));
-                        editorAuthor.subscribe('editableInput', debounce(save, 1000));
-                        editorContent.subscribe('editableInput', debounce(save, 1000));
-                        document.getElementById('deleteButton').style.display = "";
-                    }
-                }
-                document.getElementById('copyButton').style.display = "";
+                //}, 1000)
             } else {
                 myKeys = await SEA.pair();
                 urlPassword = SEA.random(11).toString('hex');
                 user.auth(myKeys);
                 hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
-                if (user.is) {
-                    var encPass = await SEA.encrypt(urlPassword, myKeys);
-                    user.get('articles').get(hash).get('pass').put(encPass);
-                    var editorTitle = new MediumEditor('#title', {placeholder: {
-                        text: 'Title',
-                        hideOnClick: false
-                    }, spellcheck: false, disableReturn: true,toolbar: false});
-                    var editorAuthor = new MediumEditor('#author', {placeholder: {
-                        text: 'Your name',
-                        hideOnClick: false
-                    }, spellcheck: false, disableReturn: true,toolbar: false});
-                    var autolist = new AutoList();
-                    var editorContent = new MediumEditor('#content', {
-                        placeholder: {
-                            text: 'Your story...',
-                            hideOnClick: false
-                        }, 
-                        spellcheck: true,
-                        autoLink: true,
-                        toolbar: { 
-                            buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
-                        },
-                        extensions: {
-                            'autolist': autolist
-                        }
-                    });
-                    editorTitle.subscribe('editableInput', debounce(save, 1000));
-                    editorAuthor.subscribe('editableInput', debounce(save, 1000));
-                    editorContent.subscribe('editableInput', debounce(save, 1000));
-                    document.getElementById('publishButton').style.cssText = "";
-                    document.getElementById('about').style.cssText = "";
-                }
+                var encPass = await SEA.encrypt(urlPassword, myKeys);
+                user.get('articles').get(hash).get('pass').put(encPass);
+                renderArticle(myKeys.pub, hash, 'create');
             }
-            document.getElementById('app').style.cssText = "";
         }
         go();
     </script>
