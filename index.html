@@ -72,7 +72,6 @@
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/rindexed.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@2.0.11/dist/purify.min.js"></script>
-    <script src="./lib/MediumEditorAutolist.js"></script>
     <script>
         const peers = ['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun', 'https://gunjs.herokuapp.com/gun'];
         const gun = Gun({localStorage:false, peers:peers});
@@ -150,7 +149,6 @@
                     text: 'Your name',
                     hideOnClick: false
                 }, spellcheck: false, disableReturn: true,toolbar: false});
-                var autolist = new AutoList();
                 var editorContent = new MediumEditor('#content', {
                     placeholder: {
                         text: 'Your story...',
@@ -160,9 +158,6 @@
                     autoLink: true,
                     toolbar: { 
                         buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
-                    },
-                    extensions: {
-                        'autolist': autolist
                     }
                 });
                 editorTitle.subscribe('editableInput', debounce(save, 1000));
@@ -201,17 +196,12 @@
                 
                 var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
                 var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
-                
-                var autolist = new AutoList();
                 var editorContent = new MediumEditor('#content', {
                     placeholder: false, 
                     spellcheck: true, 
                     autoLink: true,
                     toolbar: { 
                         buttons: ['bold', 'italic', 'underline', 'anchor', 'h2', 'h3', 'quote', 'pre', 'unorderedlist','orderedlist'] 
-                    },
-                    extensions: {
-                        'autolist': autolist
                     }
                 });
                 editorTitle.subscribe('editableInput', debounce(save, 1000));
