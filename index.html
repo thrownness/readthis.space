@@ -20,8 +20,8 @@
     <meta name="theme-color" content="#ffffff">
 
     <link rel="stylesheet" href="https://newcss.net/new.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/js/medium-editor.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/medium-editor@latest/dist/css/medium-editor.min.css" type="text/css" media="screen" charset="utf-8">
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.3.6/quill.bubble.css">
+    <script src="https://cdn.quilljs.com/1.3.4/quill.js"></script>
     <style>
         #meta { font-size: small; }
         #savedText {
@@ -141,15 +141,28 @@
 
         function renderArticle(authorPub, articleHash, audienceType) {
             if (audienceType == 'create') {
-                var editorTitle = new MediumEditor('#title', {placeholder: {
-                    text: 'Title',
-                    hideOnClick: false
-                }, spellcheck: false, disableReturn: true,toolbar: false});
-                var editorAuthor = new MediumEditor('#author', {placeholder: {
-                    text: 'Your name',
-                    hideOnClick: false
-                }, spellcheck: false, disableReturn: true,toolbar: false});
-                var editorContent = new MediumEditor('#content', {
+                var editorTitle = new Quill('#title', {
+                    theme: 'bubble',
+                    placeholder: {
+                        text: 'Title',
+                        hideOnClick: false
+                    }, 
+                    spellcheck: false, 
+                    disableReturn: true,
+                    toolbar: false
+                });
+                var editorAuthor = new Quill('#author', {
+                    theme: 'bubble',
+                    placeholder: {
+                        text: 'Your name',
+                        hideOnClick: false
+                    }, 
+                    spellcheck: false, 
+                    disableReturn: true,
+                    toolbar: false
+                });
+                var editorContent = new Quill('#content', {
+                    theme: 'bubble',
                     placeholder: {
                         text: 'Your story...',
                         hideOnClick: false
@@ -194,9 +207,10 @@
                     }
                 })
                 
-                var editorTitle = new MediumEditor('#title', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
-                var editorAuthor = new MediumEditor('#author', {placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
-                var editorContent = new MediumEditor('#content', {
+                var editorTitle = new Quill('#title', {theme: 'bubble',placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                var editorAuthor = new Quill('#author', {theme: 'bubble',placeholder: false, spellcheck: false, disableReturn: true,toolbar: false});
+                var editorContent = new Quill('#content', {
+                    theme: 'bubble',
                     placeholder: false, 
                     spellcheck: true, 
                     autoLink: true,
