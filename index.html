@@ -66,6 +66,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="./irisSEA.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/promise.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/radix.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/radisk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/store.js"></script>
@@ -84,7 +85,7 @@
 
         async function publish() {
             localStorage.setItem(myKeys.pub, JSON.stringify(myKeys));
-            await gun.get(`readthis.space#`).get(hash).put(myKeys.pub); 
+            await gun.get(`readthis.space#`).get(hash).promPut(myKeys.pub); 
             var url = `?t=${encodeURIComponent(currentTitle.replace(/\s+/g, '-').toLowerCase())}&p=${urlPassword}#${hash}`
             history.pushState({},'', url);
             location.reload();
@@ -100,7 +101,7 @@
 
         function deleteArticle(buttonElement) {
             user.get('articles').get(hash).map().once(async (node, nodeID) => {
-                user.get('articles').get(hash).get(nodeID).put(null);
+                user.get('articles').get(hash).get(nodeID).promPut(null);
             })
             localStorage.removeItem(myKeys.pub);
             buttonElement.innerText = 'Deleted! 👍';
@@ -131,9 +132,9 @@
             }
             if (name === 'title') { currentTitle = editable.innerText }
             var encNode = await SEA.encrypt(content, urlPassword)
-            await user.get('articles').get(hash).get(name).put(encNode)
+            await user.get('articles').get(hash).get(name).promPut(encNode)
             var encTime = await SEA.encrypt(new Date().toUTCString(), urlPassword)
-            await user.get('articles').get(hash).get('lastUpdated').put(encTime);
+            await user.get('articles').get(hash).get('lastUpdated').promPut(encTime);
 
             savedTextEl.classList.add('fadeInAndOut');
         }
@@ -219,7 +220,7 @@
             if (window.location.search) {
                 urlPassword = new URLSearchParams(window.location.search).get("p");
                 hash = window.location.hash.slice(1)
-                var authorPubKey = await gun.get('readthis.space#').get(hash).once();
+                var authorPubKey = await gun.get('readthis.space#').get(hash).promOnce();
                 authorPubKey = authorPubKey.data
                 var localstorageKeyPair = localStorage.getItem(authorPubKey);
                 if (localstorageKeyPair) {
@@ -237,7 +238,7 @@
                 user.auth(myKeys);
                 hash = await SEA.work(myKeys.pub, null, null, {name: "SHA-256"});
                 var encPass = await SEA.encrypt(urlPassword, myKeys);
-                await user.get('articles').get(hash).get('pass').put(encPass);
+                await user.get('articles').get(hash).get('pass').promPut(encPass);
                 renderArticle(myKeys.pub, hash, 'create');
             }
         }
